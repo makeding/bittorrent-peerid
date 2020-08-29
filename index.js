@@ -15,21 +15,12 @@ module.exports = peerId => {
   } else if (typeof peerId === 'string') {
     buffer = Buffer.from(peerId, 'utf8')
 
-    // assume utf8 peerId, but if that's invalid, then try hex encoding
-    if (buffer.length !== 20) { buffer = Buffer.from(peerId, 'hex') }
   } else {
     throw new Error(`Invalid peerId must be Buffer or hex string: ${peerId}`)
   }
-
-  if (buffer.length !== 20) {
-    throw new Error(`Invalid peerId length (hex buffer must be 20 bytes): ${peerId}`)
-  }
-
-  // overwrite original peerId string with guaranteed utf8 version
   peerId = buffer.toString('utf8')
 
   let client = null
-
   // If the client reuses parts of the peer ID of other peers, then try to determine this
   // first (before we misidentify the client).
   if (utils.isPossibleSpoofClient(peerId)) {
@@ -69,6 +60,7 @@ module.exports = peerId => {
       }
 
       return {
+        origin: peerId.substring(1, 3),
         client,
         version
       }
@@ -79,7 +71,10 @@ module.exports = peerId => {
   if (utils.isShadowStyle(peerId)) {
     if ((client = getShadowStyleClientName(peerId))) {
       // TODO: handle shadow style client version numbers
-      return { client }
+      return {
+        origin: peerId.substring(0, 1),
+        client
+      }
     }
   }
 
@@ -87,7 +82,10 @@ module.exports = peerId => {
   if (utils.isMainlineStyle(peerId)) {
     if ((client = getMainlineStyleClientName(peerId))) {
       // TODO: handle mainline style client version numbers
-      return { client }
+      return {
+        origin: peerId.substring(0, 1),
+        client
+      }
     }
   }
 
@@ -102,6 +100,7 @@ module.exports = peerId => {
 
     // TODO: handle simple client version numbers
     return {
+      origin: client,
       client,
       version: data.version
     }
@@ -185,21 +184,21 @@ const VER_AZ_WEBTORRENT_STYLE = v => {
 const VER_AZ_THREE_ALPHANUMERIC_DIGITS = '2.33.4'
 const VER_NONE = 'NO_VERSION'
 
-function addAzStyle (id, client, version = VER_AZ_FOUR_DIGITS) {
+function addAzStyle(id, client, version = VER_AZ_FOUR_DIGITS) {
   azStyleClients[id] = client
   azStyleClientVersions[client] = version
 }
 
-function addShadowStyle (id, client, version = VER_AZ_THREE_DIGITS) {
+function addShadowStyle(id, client, version = VER_AZ_THREE_DIGITS) {
   shadowStyleClients[id] = client
   shadowStyleClientVersions[client] = version
 }
 
-function addMainlineStyle (id, client) {
+function addMainlineStyle(id, client) {
   mainlineStyleClients[id] = client
 }
 
-function addSimpleClient (client, version, id, position) {
+function addSimpleClient(client, version, id, position) {
   if (typeof id === 'number' || typeof id === 'undefined') {
     position = id
     id = version
@@ -214,19 +213,19 @@ function addSimpleClient (client, version, id, position) {
   })
 }
 
-function getAzStyleClientName (peerId) {
+function getAzStyleClientName(peerId) {
   return azStyleClients[peerId.substring(1, 3)]
 }
 
-function getShadowStyleClientName (peerId) {
+function getShadowStyleClientName(peerId) {
   return shadowStyleClients[peerId.substring(0, 1)]
 }
 
-function getMainlineStyleClientName (peerId) {
+function getMainlineStyleClientName(peerId) {
   return mainlineStyleClients[peerId.substring(0, 1)]
 }
 
-function getSimpleClient (peerId) {
+function getSimpleClient(peerId) {
   for (let i = 0; i < customStyleClients.length; ++i) {
     const client = customStyleClients[i]
 
@@ -238,7 +237,7 @@ function getSimpleClient (peerId) {
   return null
 }
 
-function getAzStyleClientVersion (client, peerId) {
+function getAzStyleClientVersion(client, peerId) {
   const version = azStyleClientVersions[client]
   if (!version) return null
 
@@ -334,7 +333,7 @@ function getAzStyleClientVersion (client, peerId) {
   addAzStyle('VG', '\u54c7\u560E (Vagaa)', VER_AZ_FOUR_DIGITS)
   addAzStyle('XL', '\u8FC5\u96F7\u5728\u7EBF (Xunlei)')// Apparently, the English name of the client is "Thunderbolt".
   addAzStyle('XT', 'XanTorrent')
-  addAzStyle('XF', 'Xfplay', VER_AZ_TRANSMISSION_STYLE)
+  addAzStyle('XF', 'Xfplay', '\u5f71\u97f3\u5148\u950b')//xfplay.com
   addAzStyle('XX', 'XTorrent', '1.2.34')
   addAzStyle('XC', 'XTorrent', '1.2.34')
   addAzStyle('ZT', 'ZipTorrent')
